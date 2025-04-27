@@ -1,0 +1,50 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "description": "Node.js TypeScript Express MongoDB API boilerplate",
+  "main": "dist/index.js",
+  "scripts": {
+    "start": "node dist/index.js",
+    "dev": "nodemon",
+    "build": "tsc",
+    "lint": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "prebuild": "npm run clean",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "nodejs",
+    "typescript",
+    "express",
+    "mongodb",
+    "api",
+    "boilerplate"
+  ],
+  "author": "",
+  "license": "ISC",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "dependencies": {
+    "@langchain/openai": "^0.5.6",
+    "@types/bcrypt": "^5.0.2",
+    "@types/cors": "^2.8.17",
+    "@types/jsonwebtoken": "^9.0.9",
+    "bcrypt": "^5.1.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "langchain": "^0.3.23",
+    "mongoose": "^8.13.2",
+    "zod": "^3.24.3"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.1",
+    "@types/mongoose": "^5.11.96",
+    "@types/node": "^22.14.1",
+    "nodemon": "^3.1.9",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
+  }
+}
