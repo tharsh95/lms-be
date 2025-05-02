@@ -2,9 +2,9 @@ import { v2 as cloudinary } from 'cloudinary';
 
 // Configuration
 cloudinary.config({
-    cloud_name: 'dplsckp4p',
-    api_key: '515655718461938',
-    api_secret: 'yXKC9YBtSUYZlApX_iJ0rah9YgQ'
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
 // Upload an image
