@@ -14,6 +14,7 @@ export interface AssignmentInput {
   difficultyLevel: string;
   grade: string;
   subject: string;
+  type: string;
 }
 
 export type QuestionType = 'essay' | 'multiple_choice' | 'short_answer_test' | 'presentation';
@@ -25,6 +26,7 @@ export interface Question {
   options?: string[];
   correctAnswer?: string;
   explanation?: string;
+  _id?: string;
 }
 
 export interface Assignment {
@@ -35,7 +37,7 @@ export interface Assignment {
   topic: string;
   subject: string;
   difficultyLevel: string;
-
+  type: string;
   createdAt: Date;
   updatedAt: Date;
 }

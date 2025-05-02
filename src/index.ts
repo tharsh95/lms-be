@@ -5,6 +5,8 @@ import { connectDB } from './config/database';
 import * as errorMiddleware from './middleware/error.middleware';
 import authRoutes from './routes/auth.routes';
 import assignmentRoutes from './routes/assignment.routes';
+import classRoutes from './routes/class.routes';
+import courseRoutes from './routes/course.routes';
 
 // Load environment variables
 dotenv.config();
@@ -33,7 +35,8 @@ app.get('/', (req: Request, res: Response) => {
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/assignment', assignmentRoutes);
-
+app.use('/api/classes', classRoutes);
+app.use('/api/courses', courseRoutes);
 // 404 handler - must be after all valid routes
 app.use(errorMiddleware.notFoundHandler);
 

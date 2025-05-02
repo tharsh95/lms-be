@@ -1,16 +1,20 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import { Assignment } from '../interfaces/assignment.interface';
+import { ICourse } from './course.model';
+import { IUser } from './user.model';
 
 // Create Question Schema
 const QuestionSchema = new Schema({
   questionText: { type: String, required: true },
   type: { 
+
     type: String, 
     required: true,
     enum: ['multiple_choice', 'essay', 'short_answer_test', 'presentation', 'lab_report', 'case_study', 'portfolio']
   },
   points: { type: Number, required: true },
   options: [{ type: String }], // For multiple choice questions
+
 });
 
 // Create Answer Key Schema
@@ -68,12 +72,20 @@ const AssignmentSchema = new Schema({
   },
   grade: { type: String, required: true },
   topic: { type: String, required: true },
-  subject: { type: String, required: true },
+  course: { type: Schema.Types.ObjectId, ref: 'Course' },
   difficultyLevel: { type: String, required: true },
   createdBy: { type: String, required: true },
   isActive: { type: Boolean, default: true },
-
-  // Optional fields based on assignment type
+  dueDate: { type: Date },
+  totalMarks: { type: Number, min: [0, 'Total marks cannot be negative'] },
+  status: { type: String, enum: ['draft', 'published', 'submitted', 'graded'], default: 'draft' },
+  submissions: [{
+    student: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    submittedAt: { type: Date, required: true },
+    fileUrl: { type: String, trim: true },
+    marks: { type: Number, min: [0, 'Marks cannot be negative'] },
+    feedback: { type: String, trim: true }
+  }],
   questions: [QuestionSchema],
   answerKey: [AnswerKeySchema],
   rubric: [RubricSchema],
@@ -84,5 +96,13 @@ const AssignmentSchema = new Schema({
   timestamps: true
 });
 
+// Index for efficient queries
+AssignmentSchema.index({ course: 1 });
+AssignmentSchema.index({ 'submissions.student': 1 });
+AssignmentSchema.index({ dueDate: 1 });
+AssignmentSchema.index({ status: 1 });
+
 // Create and export the model
-export const AssignmentModel = mongoose.model<Assignment & Document>('Assignment', AssignmentSchema); 
+export const AssignmentModel = mongoose.model<Assignment & Document>('Assignment', AssignmentSchema);
+
+export default AssignmentModel; 
