@@ -88,7 +88,6 @@ export const getAssignments = async (
           select: 'courseName subject grade'
         })
         .sort({ createdAt: -1 });
-
       res.status(200).json({
         success: true,
         data: assignments,

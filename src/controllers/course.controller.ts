@@ -6,7 +6,6 @@ import pdfParse from 'pdf-parse';
 import fs from 'fs';
 import { generateResponse } from '../utils/deepseek';
 import { extractionPrompt, gradingReferencesPrompt } from '../utils/prompt';
-import { cleanAndValidateJSON } from '../utils/validatejson';
 import Class from '../models/class.model';
 import AssignmentModel from '../models/assignment.model';
 // Create course with PDF syllabus
@@ -24,68 +23,74 @@ export const createSyllabusWithPdf = async (
     if (!file) {
       throw new BadRequestError('Syllabus PDF is required');
     }
+    // Upload PDF to Cloudinary
+    const uploadRes = await uploadResult(file);
+
+
+
 
     // Read and parse PDF
     const dataBuffer = fs.readFileSync(file.path);
     const pdfData = await pdfParse(dataBuffer);
     const pdfText = pdfData.text;
     // const data = await generateResponse(extractionPrompt + pdfText+JSON.stringify({courseName,subject,grade,description}));
-    const data = await generateResponse(JSON.stringify(extractionPrompt + pdfText+JSON.stringify({courseName,subject,grade,description})  +"Make sure the required fields should be in camel case format and the output should be valid json strictly")); // Create course with AI metadata
+    const data = await generateResponse(JSON.stringify(extractionPrompt + pdfText + JSON.stringify({ courseName, subject, grade, description }) + "Make sure the required fields should be in camel case format and the output should be valid json strictly")); // Create course with AI metadata
     if (!data) {
-     throw new BadRequestError('No response from AI');
-   }
-   
-   // 4. Remove triple backticks and language hints (```json, ```javascript, etc.)
-   let jsonString = data.trim();
-   const lines = jsonString.split('\n');
-   
-   if (lines[0].startsWith('```')) lines.shift();
-   if (lines[lines.length - 1].startsWith('```')) lines.pop();
-   jsonString = lines.join('\n');
-   
-   
-   
-   // 5. Final sanitation of invisible control characters
-   const cleanedString = jsonString.replace(/[\u0000-\u001F\u007F-\u009F]/g, '');
-   let parsedSyllabus;
-   try {
-     if (!cleanedString.startsWith('{') || !cleanedString.endsWith('}')) {
-       throw new Error('Response does not appear to be a valid JSON object');
-     }
-     parsedSyllabus = JSON.parse(cleanedString);
-   } catch (error: any) {
-     console.error('Error parsing AI response:', error.message);
-     console.error('First 200 chars of response:', data.slice(0, 200));
-     console.error('Cleaned string:', cleanedString);
-     throw new BadRequestError(`Invalid response format from AI: ${error.message}`);
-   }
-   parsedSyllabus.gradingReferences = []
-        const course = await Course.create({
-          courseName,
-          subject,
-          grade,
-          description,
-          parsedSyllabus:parsedSyllabus,
-          // createdBy: req.user?.email,
-          aiMetadata: {
-            prompt:extractionPrompt,
-            referenceBooks:[],
-            generatedSyllabus: '', // This will be filled by AI later
-          },
-        });
-        const classes = await Class.find({
-          subject:course.subject,
-          grade:course.grade
-        })
-        for(const cls of classes){
-          cls.courses.push(course._id)
-          await cls.save()
-        }
-        res.status(201).json({
-          success: true,
-          data:course,
-        });
-   
+      throw new BadRequestError('No response from AI');
+    }
+
+    // 4. Remove triple backticks and language hints (```json, ```javascript, etc.)
+    let jsonString = data.trim();
+    const lines = jsonString.split('\n');
+
+    if (lines[0].startsWith('```')) lines.shift();
+    if (lines[lines.length - 1].startsWith('```')) lines.pop();
+    jsonString = lines.join('\n');
+
+
+
+    // 5. Final sanitation of invisible control characters
+    const cleanedString = jsonString.replace(/[\u0000-\u001F\u007F-\u009F]/g, '');
+    let parsedSyllabus;
+    try {
+      if (!cleanedString.startsWith('{') || !cleanedString.endsWith('}')) {
+        throw new Error('Response does not appear to be a valid JSON object');
+      }
+      parsedSyllabus = JSON.parse(cleanedString);
+    } catch (error: any) {
+      console.error('Error parsing AI response:', error.message);
+      console.error('First 200 chars of response:', data.slice(0, 200));
+      console.error('Cleaned string:', cleanedString);
+      throw new BadRequestError(`Invalid response format from AI: ${error.message}`);
+    }
+    parsedSyllabus.gradingReferences = []
+    const course = await Course.create({
+      courseName,
+      subject,
+      grade,
+      description,
+      syllabusPdfUrl: uploadRes.secure_url,
+      parsedSyllabus: parsedSyllabus,
+      createdBy: req.user?.email,
+      aiMetadata: {
+        prompt: extractionPrompt,
+        referenceBooks: [],
+        generatedSyllabus: '', // This will be filled by AI later
+      },
+    });
+    const classes = await Class.find({
+      subject: course.subject,
+      grade: course.grade
+    })
+    for (const cls of classes) {
+      cls.courses.push(course._id)
+      await cls.save()
+    }
+    res.status(201).json({
+      success: true,
+      data: course,
+    });
+
 
     // Clean up: Delete the temporary file
     fs.unlinkSync(file.path);
@@ -94,7 +99,7 @@ export const createSyllabusWithPdf = async (
     res.status(201).json({
       success: true,
       // data:JSON.parse(jsonString),
-      data:course,
+      data: course,
     });
     return res;
   } catch (error) {
@@ -111,70 +116,70 @@ export const createSyllabusWithAI = async (
 ): Promise<Response> => {
   try {
 
-//  // console.log(req.body,74)
- const data = await generateResponse(JSON.stringify(req.body)+"Make sure the required fields should be in camel case format and the output should be valid json strictly"+extractionPrompt) // Create course with AI metadata
- if (!data) {
-  throw new BadRequestError('No response from AI');
-}
+    //  // console.log(req.body,74)
+    const data = await generateResponse(JSON.stringify(req.body) + "Make sure the required fields should be in camel case format and the output should be valid json strictly" + extractionPrompt) // Create course with AI metadata
+    if (!data) {
+      throw new BadRequestError('No response from AI');
+    }
 
-// 4. Remove triple backticks and language hints (```json, ```javascript, etc.)
-let jsonString = data.trim();
-const lines = jsonString.split('\n');
+    // 4. Remove triple backticks and language hints (```json, ```javascript, etc.)
+    let jsonString = data.trim();
+    const lines = jsonString.split('\n');
 
-if (lines[0].startsWith('```')) lines.shift();
-if (lines[lines.length - 1].startsWith('```')) lines.pop();
-jsonString = lines.join('\n');
+    if (lines[0].startsWith('```')) lines.shift();
+    if (lines[lines.length - 1].startsWith('```')) lines.pop();
+    jsonString = lines.join('\n');
 
 
 
-// 5. Final sanitation of invisible control characters
-const cleanedString = jsonString.replace(/[\u0000-\u001F\u007F-\u009F]/g, '');
-let parsedSyllabus;
-try {
-  if (!cleanedString.startsWith('{') || !cleanedString.endsWith('}')) {
-    throw new Error('Response does not appear to be a valid JSON object');
+    // 5. Final sanitation of invisible control characters
+    const cleanedString = jsonString.replace(/[\u0000-\u001F\u007F-\u009F]/g, '');
+    let parsedSyllabus;
+    try {
+      if (!cleanedString.startsWith('{') || !cleanedString.endsWith('}')) {
+        throw new Error('Response does not appear to be a valid JSON object');
+      }
+      parsedSyllabus = JSON.parse(cleanedString);
+    } catch (error: any) {
+      console.error('Error parsing AI response:', error.message);
+      console.error('First 200 chars of response:', data.slice(0, 200));
+      console.error('Cleaned string:', cleanedString);
+      throw new BadRequestError(`Invalid response format from AI: ${error.message}`);
+    }
+    parsedSyllabus.gradingReferences = []
+    const course = await Course.create({
+      courseName: req.body.courseDetails.courseName,
+      subject: req.body.courseDetails.subject,
+      grade: req.body.courseDetails.grade,
+      description: req.body.courseDetails.description,
+      parsedSyllabus: parsedSyllabus,
+      createdBy: req.user?.email,
+      aiMetadata: {
+        prompt: req.body.prompt + extractionPrompt,
+        referenceBooks: req.body.additionalInfo,
+        generatedSyllabus: '', // This will be filled by AI later
+      },
+    });
+    const classes = await Class.find({
+      subject: course.subject,
+      grade: course.grade
+    })
+    for (const cls of classes) {
+      cls.courses.push(course._id)
+      await cls.save()
+    }
+    res.status(201).json({
+      success: true,
+      data: course,
+    });
+  } catch (error) {
+    next(error);
   }
-  parsedSyllabus = JSON.parse(cleanedString);
-} catch (error: any) {
-  console.error('Error parsing AI response:', error.message);
-  console.error('First 200 chars of response:', data.slice(0, 200));
-  console.error('Cleaned string:', cleanedString);
-  throw new BadRequestError(`Invalid response format from AI: ${error.message}`);
-}
-parsedSyllabus.gradingReferences = []
-     const course = await Course.create({
-       courseName:req.body.courseDetails.courseName,
-       subject:req.body.courseDetails.subject,
-       grade:req.body.courseDetails.grade,
-       description:req.body.courseDetails.description,
-       parsedSyllabus:parsedSyllabus,
-       // createdBy: req.user?.email,
-       aiMetadata: {
-         prompt:req.body.prompt+extractionPrompt,
-         referenceBooks:req.body.additionalInfo,
-         generatedSyllabus: '', // This will be filled by AI later
-       },
-     });
-     const classes = await Class.find({
-       subject:course.subject,
-       grade:course.grade
-     })
-     for(const cls of classes){
-       cls.courses.push(course._id)
-       await cls.save()
-     }
-     res.status(201).json({
-       success: true,
-       data:course,
-     });
-   } catch (error) {
-     next(error);
-   }
-// const course = await Course.findById("6813369ff218984487007b4f");
-// res.status(201).json({
-//   success: true,
-//   data:course,
-// });
+  // const course = await Course.findById("6813369ff218984487007b4f");
+  // res.status(201).json({
+  //   success: true,
+  //   data:course,
+  // });
   return res;
 };
 
@@ -188,7 +193,7 @@ export const getAllCourses = async (
     const courses = await Course.find()
       .select('-aiMetadata -parsedSyllabus')  // Exclude multiple fields
       .populate('createdBy', 'name email')
-      .sort({ createdAt: 1 });
+      .sort({ createdAt: -1 });
 
     // Get enrollment information for each course
     const coursesWithEnrollment = await Promise.all(
@@ -203,26 +208,26 @@ export const getAllCourses = async (
         });
 
         // Calculate total enrolled students
-          const enrolledStudents = classes.reduce((total, cls) => total + cls.students.length, 0);
-          const assignments = await AssignmentModel.find({
-            course: course._id,
-            isActive: true
-          })
-
-          return {
-            ...course.toObject(),
-            enrollment: {
-              totalStudents: enrolledStudents,
-              totalAssignments:assignments.length,
-              classes: classes.map(cls => ({
-                classId: cls._id,
-                className: cls.name,
-                students: cls.students
-              }))
-            }
-          };
+        const enrolledStudents = classes.reduce((total, cls) => total + cls.students.length, 0);
+        const assignments = await AssignmentModel.find({
+          course: course._id,
+          isActive: true
         })
-      );
+
+        return {
+          ...course.toObject(),
+          enrollment: {
+            totalStudents: enrolledStudents,
+            totalAssignments: assignments.length,
+            classes: classes.map(cls => ({
+              classId: cls._id,
+              className: cls.name,
+              students: cls.students
+            }))
+          }
+        };
+      })
+    );
 
     res.status(200).json({
       success: true,
@@ -289,8 +294,8 @@ export const getCourseById = async (
     next(error);
     return res;
   }
-}; 
-export const updateCourseById=async(req:Request,res:Response,next:NextFunction)=>{
+};
+export const updateCourseById = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const course = await Course.findByIdAndUpdate(req.params.id, req.body, { new: true });
     res.status(200).json({
@@ -315,22 +320,22 @@ export const updateCourseById=async(req:Request,res:Response,next:NextFunction)=
 //     const prompt = JSON.stringify(req.body) +
 //       " Make sure the required fields should be in camelCase format and the output should be valid JSON strictly. " +
 //       gradingReferencesPrompt;
-    
+
 //     const data = await generateResponse(prompt);
 //     if (!data) {
 //       throw new BadRequestError('No response from AI');
 //     }
-    
+
 //     // 4. Remove triple backticks and language hints (```json, ```javascript, etc.)
 //     let jsonString = data.trim();
 //     const lines = jsonString.split('\n');
-    
+
 //     if (lines[0].startsWith('```')) lines.shift();
 //     if (lines[lines.length - 1].startsWith('```')) lines.pop();
 //     jsonString = lines.join('\n');
-    
-    
-    
+
+
+
 //     // 5. Final sanitation of invisible control characters
 
 //     const cleanedString = jsonString.replace(/[\u0000-\u001F\u007F-\u009F]/g, '');
@@ -346,22 +351,22 @@ export const updateCourseById=async(req:Request,res:Response,next:NextFunction)=
 //       console.error('Cleaned string:', cleanedString);
 //       throw new BadRequestError(`Invalid response format from AI: ${error.message}`);
 //     }
-    
+
 //     // Find course and update
 //     const course = await Course.findById(id);
 //     if (!course) {
 //        return res.status(404).json({ error: "Course not found" });
 //     }
-    
+
 //     course.parsedSyllabus = {
 //       ...course.parsedSyllabus,
 //        ...gradingReferences,
 //     };
-    
+
 //     await course.save();
-    
+
 //      res.status(200).json({ message: "Grading reference added successfully", course });
-    
+
 
 //   } catch (error) {
 //     next(error);
@@ -461,7 +466,7 @@ export const getAssignmentsByCourseId = async (
 ): Promise<Response> => {
   try {
     const { courseId } = req.params;
-    const assignment = await AssignmentModel.find({course:courseId})
+    const assignment = await AssignmentModel.find({ course: courseId })
       // .populate({
       //   path: 'assignments',
       //   select: 'title description type grade createdAt'
