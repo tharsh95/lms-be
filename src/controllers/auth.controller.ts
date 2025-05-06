@@ -9,8 +9,8 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1d';
 
 // Generate JWT token
-const generateToken = (userId: string): string => {
-  const payload = { id: userId };
+const generateToken = (user: any): string => {
+  const payload = { user };
   const options: SignOptions = {
     expiresIn: "1d",
   };
@@ -40,7 +40,7 @@ export const register = async (
       name,
     });
     // Generate token
-    const token = generateToken(user.email);
+    const token = generateToken(user);
 
     // Send response
     res.status(201).json({
@@ -50,6 +50,7 @@ export const register = async (
           id: user._id,
           email: user.email,
           name: user.name,
+          role: user.role,
         },
         token,
       },
@@ -81,7 +82,7 @@ export const login = async (
     }
 
     // Generate token
-    const token = generateToken(user.email);
+    const token = generateToken(user);
 
     // Send response
     res.status(200).json({
@@ -91,6 +92,7 @@ export const login = async (
           id: user._id,
           email: user.email,
           name: user.name,
+          role: user.role,
         },
         token,
       },
@@ -110,6 +112,9 @@ export const getMe = async (
     success: true,
     user: {
       email: user?.email,
+      name: user?.name,
+      role: user?.role,
+      id: user?._id,
     },
   })
 
@@ -124,7 +129,6 @@ export const addStudent = async (
   try {
     const { name, email, classId } = req.body;
     const role = "student"
-    console.log(classId);
 
     // Check if class exists
     const classExists = await Class.findById(classId);

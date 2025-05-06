@@ -1,5 +1,5 @@
 import express, { Router } from 'express';
-import {  createCourse, createSyllabusWithAI, createSyllabusWithPdf, getAllCourses, getCourseById, updateCourseById } from '../controllers/course.controller';
+import {  createCourse, createSyllabusWithAI, createSyllabusWithPdf, getAllCourses, getCourseById, updateCourseById, getAssignmentsByCourseId } from '../controllers/course.controller';
 import { verifyToken } from '../middleware/auth.middleware';
 import multer from 'multer';
 
@@ -37,6 +37,9 @@ router.get('/', verifyToken, (req, res, next) => {
 // Get course by ID
 router.get('/:id', verifyToken, (req, res, next) => {
     getCourseById(req, res, next).catch(next);
+});
+router.get('/:courseId/assignments', verifyToken, (req, res, next) => {
+    getAssignmentsByCourseId(req, res, next).catch(next);
 });
 
 // Update course by ID

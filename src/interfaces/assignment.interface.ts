@@ -6,15 +6,16 @@ export interface QuestionTypeConfig {
 
 export interface AssignmentInput {
   title: string;
-  topic: string;
+  course: string;
   description: string;
   questionType: QuestionTypeConfig;
   numberOfQuestions?: number;
   publishToLMS?: string[];
-  difficultyLevel: string;
+  difficulty: string;
   grade: string;
   subject: string;
   type: string;
+
 }
 
 export type QuestionType = 'essay' | 'multiple_choice' | 'short_answer_test' | 'presentation';
@@ -34,7 +35,7 @@ export interface Assignment {
   description: string;
   questions: Question[];
   grade: number;
-  topic: string;
+
   subject: string;
   difficultyLevel: string;
   type: string;

@@ -8,6 +8,10 @@ declare global {
     interface Request {
       user?: {
         email: string;
+        _id: string;
+        name: string;
+        role: string;
+        
       };
     }
   }
@@ -28,10 +32,13 @@ export const verifyToken = async (
     }
 
     try {
-      const decoded = jwt.verify(token, JWT_SECRET) as { id: string };
+      const decoded = jwt.verify(token, JWT_SECRET) as {user: {_id: string; email: string; name: string; role: string }  };
+
       req.user = {
-        email: decoded.id // Since we stored email as id in the token
-        
+        _id: decoded.user._id,
+        email: decoded.user.email,
+        name: decoded.user.name,
+        role: decoded.user.role
       };
       next();
     } catch (error) {

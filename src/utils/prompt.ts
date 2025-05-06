@@ -123,3 +123,193 @@ const gradingReferences = [
 
 ### Syllabus Text:
 `;
+// export const testAssignmentPrompt = `
+// ## Context above
+// ## Test Assignment Generator
+
+// Create a test or quiz based on the provided educational context and specifications. Your output should include structured content such as questions, answer keys, instructions, and other components depending on the requested outputs.
+
+// ### Output Format:
+
+// Provide the output as a JavaScript object named \`assignment\`, with the following structure:
+
+// - \`title\`: The title of the assignment.
+// - \`description\`: A short description of the assignment's objective and scope.
+// - \`questions\` (if requested):
+//   - It is an array of objects with the following properties.
+//     - \`question\`: The text of the question.
+//     - \`options\`: An array of 4 strings, each prefixed with a, b, c, or d.
+//     - \`points\`: The points for the question
+// - \`answer_key\` (if requested):
+//   - It is an array of objects with the following properties.
+    
+//     - \`key\`: The correct option (e.g., "a")
+//     - \`value\`: The correct answer text
+// - \`instructions\`, \`rubric\`, \`checklist\`, and \`participation_criteria\` (if requested):
+// - \`instructions\`:It is an array of objects with the following properties:
+//   - \`title\`: The title of the instruction
+//   - \`content\`: The content of the instruction
+// - \`rubric\`: It is an array of objects with the following properties:
+//   - \`Criterion\`: The Criterion of the rubric
+//   - \`Description\`: The description of the rubric
+//   - \`Points\`: The points of the rubric
+// - \`checklist\`: It is an array of obje, whether true or falsects with the following properties:
+//   - \`item\`: The item of the checklist
+//   -\`required\`: The required of the checklist
+// - \`participation_criteria\`: It is an array of objects with the following properties:
+//   - \`Criterion\`: The Criterion of the participation criteria
+//   - \`Description\`: The description of the participation criteria
+//   - \`Points\`: The points of the participation criteria
+
+//   - Include structured, clear content based on the type.
+
+// ### Instructions:
+
+// 1. **Understand the Context:**
+//    - Use the provided subject, grade level, topic, and difficulty to guide the question design.
+//    - Focus on age-appropriate and conceptually relevant material.
+
+// 2. **Generate Test Elements:**
+//    - Depending on the \`outputs\` requested, include any combination of questions, answer keys, rubric, etc.
+
+// 3. **Follow the Question Rules:**
+//    - All multiple-choice questions must have exactly 4 options labeled a–d.
+//    - Do not include explanations with questions.
+//    - Ensure clarity and variation in question style if applicable.
+
+// 4. **Structure the Output Properly:**
+//    - Return a single object named \`assignment\` with all requested fields included.
+
+// # Note: Generate the complete object, dont return incomplete object
+// #### Note: output should not include const assignment = 
+// ### Note:If the question type is not multiple choice, the options should be an empty array, and check thee outputs in the context
+
+
+// Look at outputs in questionType, and generate that in the assignment object, leave other empty, also genearte everything dont retrn incomplete
+// For example if type is multiple choice, then generate questions, answer_key
+// If type  is short answer, then generate questions, answer_key
+// If type is discussion, then generate questions, instructions, rubric, participation_criteria
+// If type is essay, then generate questions, instructions, rubric, participation_criteria
+// If type is case study, then generate questions, instructions, rubric, participation_criteria checklist
+
+
+// ### Input Parameters:
+// - \`testType\`: e.g., "quiz", "exam"
+// - \`title\`: The title of the test
+// - \`grade\`: Target student grade
+// - \`topic\`: Subject topic
+// - \`description\`: Optional description of the assignment
+// - \`subject\`: e.g., "Science", "Mathematics"
+// - \`difficultyLevel\`: e.g., "easy", "medium", "hard"
+// - \`formatDescription\`: Notes on formatting (e.g., multiple choice only)
+// - \`numberOfQuestions\`: How many questions to generate
+// - \`outputs\`: What to generate (questions, answer_key, rubric, etc.)
+
+// ## Generate in accordance with syllabus below
+// `;
+
+
+export const testAssignmentPrompt = `
+## Test Assignment Generator
+
+You are tasked with generating a complete test assignment object based on provided input parameters.
+
+### Output Format:
+
+Return a **JavaScript object** (not a variable) with the following structure:
+
+{
+  title: string,
+  description: string,
+  questions: Array<{
+    question: string,
+    options: string[],
+    points: number
+  }>,
+  answer_key: Array<{
+    key: string,
+    value: string
+  }>,
+  instructions: Array<{
+    title: string,
+    content: string
+  }>,
+  rubric: Array<{
+    Criterion: string,
+    Description: string,
+    Points: number
+  }>,
+  checklist: Array<{
+    item: string,
+    required: boolean
+  }>,
+  participation_criteria: Array<{
+    Criterion: string,
+    Description: string,
+    Points: number
+  }>
+}
+
+### Output Rules:
+
+- **Return the object body only**: No \`const\`, \`let\`, or export statements. Just return the raw object.
+- All fields must be included. Use empty arrays for fields not requested.
+- Do not leave the object incomplete. 
+- 
+
+### Output Conditions by \`questionType\`:
+
+| questionType     | Required Fields                                             |
+|------------------|------------------------------------------------------------|
+| multiple choice  | questions, answer_key                                      |
+| short answer     | questions, answer_key                                      |
+| discussion       | questions, instructions, rubric, participation_criteria    |
+| essay            | questions, instructions, rubric, participation_criteria    |
+| case study       | questions, instructions, rubric, participation_criteria, checklist |
+
+- For **multiple choice**: Include exactly 4 options labeled a–d in each question, one should be correct.
+- For **short answer**: Include the one answer key in the answer_key array.
+- For **non-multiple choice** types: Set \`options: []\` in each question.
+
+### Guidelines:
+
+1. Use the given subject, grade, topic, and difficulty to generate age-appropriate questions.
+2. Number of questions must match \`numberOfQuestions\`.
+3. All top-level keys must be present in the output object.
+4. Do not include any extra explanation or text outside the object.
+
+### Input Parameters (you'll receive dynamically):
+
+- \`testType\`: "quiz" | "exam"
+- \`title\`: Title of the test
+- \`grade\`: Student grade
+- \`topic\`: Subject topic
+- \`description\`: Short description
+- \`subject\`: e.g., "Science", "Math"
+- \`difficultyLevel\`: "easy" | "medium" | "hard"
+- \`formatDescription\`: Optional formatting notes
+- \`numberOfQuestions\`: Number of questions to generate
+- \`outputs\`: Which fields to include (will match questionType)
+- \`questionType\`: See table above for logic
+
+### Example Reminder:
+
+**✅ Correct**:  
+\`\`\`js
+{
+  title: "...",
+  description: "...",
+  questions: [...],
+  answer_key: [...],
+  instructions: [],
+  rubric: [],
+  checklist: [],
+  participation_criteria: []
+}
+\`\`\`
+
+**❌ Incorrect**:  
+\`const assignment = { ... }\`
+
+Always return the full object body, not just partial or named variables.
+`;

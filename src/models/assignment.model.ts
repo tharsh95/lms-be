@@ -5,44 +5,44 @@ import { IUser } from './user.model';
 
 // Create Question Schema
 const QuestionSchema = new Schema({
-  questionText: { type: String, required: true },
+  question: { type: String, required: true },
   type: { 
 
     type: String, 
-    required: true,
     enum: ['multiple_choice', 'essay', 'short_answer_test', 'presentation', 'lab_report', 'case_study', 'portfolio']
   },
   points: { type: Number, required: true },
   options: [{ type: String }], // For multiple choice questions
+
+  questionId: { type: String, required: true },
 
 });
 
 // Create Answer Key Schema
 const AnswerKeySchema = new Schema({
   questionId: { type: String, required: true },
-  key: { type: String, required: true }, // For multiple choice: a, b, c, d. For others: the answer text
+  key: { type: String }, // For multiple choice: a, b, c, d. For others: the answer text
   value: { type: String }, // Optional additional context or explanation
 });
 
 // Create Rubric Schema
 const RubricSchema = new Schema({
-  criterion: { type: String, required: true },
-  points: { type: Number, required: true },
-  description: { type: String }
+  Criterion: { type: String, required: true },
+  Points: { type: Number, required: true },
+  Description: { type: String,required:true }
 });
 
 // Create Instructions Schema
 const InstructionsSchema = new Schema({
-  sections: [{ 
     title: { type: String, required: true },
     content: { type: String, required: true }
-  }]
 });
 
 // Create Participation Criteria Schema
 const ParticipationCriteriaSchema = new Schema({
-  description: { type: String, required: true },
-  points: { type: Number }
+  Criterion: { type: String, required: true },
+  Description: { type: String, required: true },
+  Points: { type: Number }
 });
 
 // Create Checklist Schema
@@ -63,15 +63,11 @@ const AssignmentSchema = new Schema({
       'essay',
       'research_paper',
       'short_answer_test',
-      'presentation',
       'discussion',
-      'lab_report',
-      'portfolio',
       'case_study'
     ]
   },
   grade: { type: String, required: true },
-  topic: { type: String, required: true },
   course: { type: Schema.Types.ObjectId, ref: 'Course' },
   difficultyLevel: { type: String, required: true },
   createdBy: { type: String, required: true },
@@ -79,17 +75,10 @@ const AssignmentSchema = new Schema({
   dueDate: { type: Date },
   totalMarks: { type: Number, min: [0, 'Total marks cannot be negative'] },
   status: { type: String, enum: ['draft', 'published', 'submitted', 'graded'], default: 'draft' },
-  submissions: [{
-    student: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    submittedAt: { type: Date, required: true },
-    fileUrl: { type: String, trim: true },
-    marks: { type: Number, min: [0, 'Marks cannot be negative'] },
-    feedback: { type: String, trim: true }
-  }],
   questions: [QuestionSchema],
-  answerKey: [AnswerKeySchema],
+  answerKey: { type: [AnswerKeySchema], default: [] },
   rubric: [RubricSchema],
-  instructions: InstructionsSchema,
+  instructions: [InstructionsSchema],
   participationCriteria: [ParticipationCriteriaSchema],
   checklist: [ChecklistSchema]
 }, {
