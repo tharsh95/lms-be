@@ -38,6 +38,7 @@ export const register = async (
       email,
       password,
       name,
+      role:"teacher"
     });
     // Generate token
     const token = generateToken(user);

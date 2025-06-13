@@ -18,28 +18,48 @@ export const createSyllabusWithPdf = async (
     const { courseName, subject, grade, description } = JSON.parse(req.body.details);
     const { file } = req;
 
-
-
     if (!file) {
       throw new BadRequestError('Syllabus PDF is required');
     }
+
+    // Validate file type
+    if (!file.mimetype || !file.mimetype.includes('pdf')) {
+      throw new BadRequestError('Only PDF files are allowed');
+    }
+
     // Upload PDF to Cloudinary
     const uploadRes = await uploadResult(file);
 
-
-
-
-    // Read and parse PDF
+    // Read and parse PDF with error handling
     const dataBuffer = fs.readFileSync(file.path);
-    const pdfData = await pdfParse(dataBuffer);
-    const pdfText = pdfData.text;
-    // const data = await generateResponse(extractionPrompt + pdfText+JSON.stringify({courseName,subject,grade,description}));
-    const data = await generateResponse(JSON.stringify(extractionPrompt + pdfText + JSON.stringify({ courseName, subject, grade, description }) + "Make sure the required fields should be in camel case format and the output should be valid json strictly")); // Create course with AI metadata
+    let pdfText = '';
+    
+    try {
+      const pdfData = await pdfParse(dataBuffer);
+      if (!pdfData || !pdfData.text) {
+        throw new Error('Could not extract text from PDF');
+      }
+      pdfText = pdfData.text;
+    } catch (error: any) {
+      console.error('PDF parsing error:', error);
+      // If pdf-parse fails, try to use the file directly
+      if (error.message.includes('bad XRef entry')) {
+        throw new BadRequestError('The PDF file appears to be corrupted or has an invalid structure. Please try converting the PDF to a different format or recreating it.');
+      }
+      throw new BadRequestError('Failed to process the PDF file. Please ensure it is not corrupted and try again.');
+    }
+
+    if (!pdfText) {
+      throw new BadRequestError('Could not extract any text from the PDF. The file might be empty or corrupted.');
+    }
+
+    const data = await generateResponse(JSON.stringify(extractionPrompt + pdfText + JSON.stringify({ courseName, subject, grade, description }) + "Make sure the required fields should be in camel case format and the output should be valid json strictly"));
+    
     if (!data) {
       throw new BadRequestError('No response from AI');
     }
 
-    // 4. Remove triple backticks and language hints (```json, ```javascript, etc.)
+    // Remove triple backticks and language hints
     let jsonString = data.trim();
     const lines = jsonString.split('\n');
 
@@ -47,11 +67,10 @@ export const createSyllabusWithPdf = async (
     if (lines[lines.length - 1].startsWith('```')) lines.pop();
     jsonString = lines.join('\n');
 
-
-
-    // 5. Final sanitation of invisible control characters
+    // Final sanitation of invisible control characters
     const cleanedString = jsonString.replace(/[\u0000-\u001F\u007F-\u009F]/g, '');
     let parsedSyllabus;
+    
     try {
       if (!cleanedString.startsWith('{') || !cleanedString.endsWith('}')) {
         throw new Error('Response does not appear to be a valid JSON object');
@@ -63,7 +82,8 @@ export const createSyllabusWithPdf = async (
       console.error('Cleaned string:', cleanedString);
       throw new BadRequestError(`Invalid response format from AI: ${error.message}`);
     }
-    parsedSyllabus.gradingReferences = []
+
+    parsedSyllabus.gradingReferences = [];
     const course = await Course.create({
       courseName,
       subject,
@@ -78,27 +98,22 @@ export const createSyllabusWithPdf = async (
         generatedSyllabus: '', // This will be filled by AI later
       },
     });
+
     const classes = await Class.find({
       subject: course.subject,
       grade: course.grade
-    })
-    for (const cls of classes) {
-      cls.courses.push(course._id)
-      await cls.save()
-    }
-    res.status(201).json({
-      success: true,
-      data: course,
     });
 
+    for (const cls of classes) {
+      cls.courses.push(course._id);
+      await cls.save();
+    }
 
     // Clean up: Delete the temporary file
     fs.unlinkSync(file.path);
-    // const course = await Course.findById("6811edacea9640f4b71201cd");
-    // const course = await Course.findById("68121f9268e7df1c7997633f");
+
     res.status(201).json({
       success: true,
-      // data:JSON.parse(jsonString),
       data: course,
     });
     return res;

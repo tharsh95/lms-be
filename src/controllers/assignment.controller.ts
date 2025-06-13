@@ -9,7 +9,6 @@ import { generateResponse } from '../utils/deepseek';
 import { testAssignmentPrompt } from '../utils/prompt';
 import mongoose from 'mongoose';
 import { Class } from '../models/class.model';
-import { convertToObjects } from '../utils/convertToObject';
 import { snakeCase } from 'lodash';
 // Extend Express Request type to include user
 interface RequestWithUser extends Request {
@@ -189,11 +188,14 @@ export const addQuestions = async (
     }
     assignment.questions.push(payload)
     const { answer } = req?.body
-    const [key, value] = answer.split('.').map((part: string) => part.trim());
+    
+    // Map the answer to the corresponding option letter (a, b, c, d)
+    const optionIndex = req?.body?.options.findIndex((option: string) => option === answer)
+    const value = optionIndex !== -1 ? String.fromCharCode(97 + optionIndex) : null // 97 is ASCII for 'a'
 
     const answerKey = {
       questionId: assignment.answerKey.length + 1,
-      key,
+      key: assignment.answerKey.length + 1,
       value
     }
     assignment.answerKey.push(answerKey)
@@ -327,36 +329,30 @@ export const generateAssignment = async (req: Request, res: Response) => {
   validateInput(input);
 
   // 2. Prepare the prompt
-  const prompt = JSON.stringify(input) + testAssignmentPrompt;
+  const prompt = JSON.stringify(input) + testAssignmentPrompt+ "\n\nPlease return a strict JSON object only. Ensure all property names are in double quotes.";;
 
   // 3. Call the AI model
   const data = await generateResponse(prompt);
-
 
   if (!data) {
     throw new BadRequestError('No response from AI');
   }
 
-  // 4. Remove triple backticks and language hints (```json, ```javascript, etc.)
+  // 4. Remove ```javascript / ```json / ``` and final ``` if present
   let jsonString = data.trim();
-  const lines = jsonString.split('\n');
 
-  if (lines[0].startsWith('```')) lines.shift();
-  if (lines[lines.length - 1].startsWith('```')) lines.pop();
-  jsonString = lines.join('\n');
-  // 5. Final sanitation of invisible control characters
-  const cleanedString = jsonString.replace(/[\u0000-\u001F\u007F-\u009F]/g, '').replace(
-    /^```(?:json|javascript)z?\s*|\s*```$/g, '');;
+  // Remove code block start like ```javascript or ```json
+  jsonString = jsonString.replace(/^```(?:json|javascript)?\s*/, '');
 
-  // Optional: Lint the JSON first (useful for development/debugging)
-  // try {
-  //   jsonlint.parse(cleanedString);
-  // } catch (lintError) {
-  //   console.error('JSON lint failed:', lintError.message);
-  //   throw new BadRequestError('AI response is not valid JSON (lint check failed)');
-  // }
+  // Remove trailing ```
+  if (jsonString.endsWith('```')) {
+    jsonString = jsonString.slice(0, -3).trim();
+  }
 
-  // 6. Parse the JSON safely
+  // 5. Remove control characters (optional, but helps with parsing)
+  const cleanedString = jsonString.replace(/[\u0000-\u001F\u007F-\u009F]/g, '');
+
+  // 6. Parse the cleaned JSON
   let assignmentData;
   try {
     if (!cleanedString.startsWith('{') || !cleanedString.endsWith('}')) {
@@ -369,12 +365,16 @@ export const generateAssignment = async (req: Request, res: Response) => {
     console.error('Cleaned string:', cleanedString);
     throw new BadRequestError(`Invalid response format from AI: ${error.message}`);
   }
+
+  // 7. Add question IDs
   assignmentData.questions.forEach((question: any, index: number) => {
     question.questionId = index + 1;
   });
+
   assignmentData.answer_key.forEach((answer: any, index: number) => {
     answer.questionId = index + 1;
   });
+
   const finalAssignmentData = {
     createdBy: req.user?.email,
     isActive: true,
@@ -395,12 +395,10 @@ export const generateAssignment = async (req: Request, res: Response) => {
     participationCriteria: assignmentData.participation_criteria,
   };
 
-  // 7. Return the final parsed assignment
-      const assignment = await AssignmentModel.create(finalAssignmentData);
-
+  // 8. Save and return
+  const assignment = await AssignmentModel.create(finalAssignmentData);
   res.status(200).json({ success: true, data: assignment });
 };
-
 
 export const addRubrics = async (req: Request, res: Response) => {
   const { id } = req.params;
